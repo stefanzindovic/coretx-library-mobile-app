@@ -1,67 +1,72 @@
+import 'package:cortex_library_mobile_app/theme/palette.dart';
+import 'package:cortex_library_mobile_app/features/login/ui/login_screen.dart';
+import 'package:cortex_library_mobile_app/theme/theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'features/home/home_screen.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
+  State<MyApp> createState() => _MyAppState();
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+class _MyAppState extends State<MyApp> {
+  late Future<String?> _authToken;
 
-  final String title;
+  Future<String?> getAuthToken() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final String? token = prefs.getString('auth_token');
+
+    return token;
+  }
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
+  void initState() {
+    super.initState();
+    _authToken = getAuthToken();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
+    return ScreenUtilInit(
+        designSize: const Size(390, 844),
+        builder: (context, child) {
+          return MaterialApp(
+            theme: data,
+            home: FutureBuilder(
+              future: _authToken,
+              builder: (context, snapshot) {
+                switch (snapshot.connectionState) {
+                  case ConnectionState.waiting:
+                    return Scaffold(
+                      backgroundColor: backgroundColor,
+                      body: const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  case ConnectionState.done:
+                  default:
+                    if (snapshot.hasError) {
+                      return const Text('Error');
+                    } else if (snapshot.hasData) {
+                      return HomeScreen(authToken: snapshot.data!);
+                    } else {
+                      return const LoginScreen();
+                    }
+                }
+              },
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
-    );
+          );
+        });
   }
 }
